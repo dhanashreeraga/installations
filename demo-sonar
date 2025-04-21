@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Config
+DEFAULT_VERSION="7.0.2.4839"
+SONAR_SCANNER_VERSION="${1:-$DEFAULT_VERSION}"
+INSTALL_BASE="/opt/sonar-scanner"
+BIN_DIR="/usr/local/bin"
+
+echo "🔧 Installing SonarScanner version ${SONAR_SCANNER_VERSION}..."
+
+# Prerequisite
+if ! command -v unzip &> /dev/null; then
+  echo "'unzip' not found. Installing..."
+  sudo apt update -y && sudo apt install -y unzip
+fi
+
+# Clean up previous installation
+sudo rm -rf "${INSTALL_BASE}/sonar-scanner" 2>/dev/null
+sudo rm -rf "${INSTALL_BASE}/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64" 2>/dev/null
+
+# Download
+TMP_ZIP="/tmp/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip"
+wget -q "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip" -O "$TMP_ZIP" || {
+  echo "Failed to download SonarScanner. Check version or internet connection."; exit 1;
+}
+
+# Create directory
+sudo mkdir -p "${INSTALL_BASE}"
+
+# Unzip with overwrite flag (-o) and don't prompt (-qq)
+sudo unzip -qq -o "$TMP_ZIP" -d "${INSTALL_BASE}" || {
+  echo "Failed to unzip. Exiting."; exit 1;
+}
+rm -f "$TMP_ZIP"
+
+# Rename directory
+EXTRACTED_DIR=$(find "${INSTALL_BASE}" -maxdepth 1 -type d -name "sonar-scanner-*" | head -1)
+if [[ -d "$EXTRACTED_DIR" ]]; then
+  sudo mv "$EXTRACTED_DIR" "${INSTALL_BASE}/sonar-scanner"
+else
+  echo "Extracted folder not found. Exiting."
+  exit 1
+fi
+
+# Add to PATH
+PROFILE_SCRIPT="/etc/profile.d/sonar-scanner.sh"
+echo "export PATH=\$PATH:${INSTALL_BASE}/sonar-scanner/bin" | sudo tee "$PROFILE_SCRIPT" > /dev/null
+sudo chmod +x "$PROFILE_SCRIPT"
+
+# Create symlink
+sudo ln -sfn "${INSTALL_BASE}/sonar-scanner/bin/sonar-scanner" "${BIN_DIR}/sonar-scanner"
+
+echo "SonarScanner ${SONAR_SCANNER_VERSION} installed successfully."
+echo "RUN: source ${PROFILE_SCRIPT} OR logout/login to activate sonar-scanner in your terminal."
