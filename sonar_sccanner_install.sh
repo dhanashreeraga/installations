@@ -37,3 +37,11 @@ if [[ -d "$EXTRACTED_DIR" ]]; then
 else
   echo "Extracted folder not found. Exiting."
   exit 1
+# add the path
+PROFILE_SCRIPT="etc/profile.d/sonar-scanner.sh"
+echo "export PATH=\$PATH:${INSTALL_BASE}/sonar-scanner/bin" | sudo tee "$PROFILE_SCRIPT" > /dev/null
+#symlink
+sudo ln -sfn "${INSTALL_BASE}/sonar-scanner/bin/sonar-scanner" "${BIN_DIR}/sonar-scanner"
+
+echo "sonarscanner ${SONAR_SCANNER_VERSION} installed successfully
+echo "RUN: source ${PROFILE_SCRIPT} OR logout/login to activate sonar-scanner in your terminal."
